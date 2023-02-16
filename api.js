@@ -223,7 +223,7 @@ app.post("/ecommerce/signin", async (req,res) => {
           expiresIn: 86400 // expires in 24 hours
         });                    
         res.json({
-          message: 'Sign in successful',
+          message: 'Sign in successful',//successful message
           id: user.id,
           email: user.email,
           token: token
