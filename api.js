@@ -33,15 +33,15 @@ const User = sequelize.define('customer', {
     mobile: {
         type: Sequelize.STRING 
     },
-    address:{
-      type: DataTypes.TEXT,
-      get: function() {
-        return JSON.parse(this.getDataValue('address'));    
-      },
-      set: function(val) {
-        this.setDataValue('address', JSON.stringify(val));
-      }
-    },
+    // address:{
+    //   type: DataTypes.TEXT,
+    //   get: function() {
+    //     return JSON.parse(this.getDataValue('address'));    
+    //   },
+    //   set: function(val) {
+    //     this.setDataValue('address', JSON.stringify(val));
+    //   }
+    // },
     // DefaultAddress:{
     //   type:DataTypes.TEXT,
     //   defaultValue: function(){
@@ -58,6 +58,52 @@ const User = sequelize.define('customer', {
    {
     timestamps: false
   });
+
+//Model- Address
+const Address = sequelize.define('Address', {
+   id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+   },
+   customer_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+   },
+   Village: {
+    type: DataTypes.STRING,
+    allowNull: false
+   },
+   City: {
+    type: DataTypes.STRING,
+    allowNull: false
+   },
+   PinCode: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+   },
+    defaultAddress: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+    validate: {
+      async checkDefaultAddress(value) {
+        if (value) {
+          const count = await Address.count({
+            where: {
+              customer_id: this.customer_id,
+              defaultAddress: true
+            }
+          });
+          if (count > 0) {
+            throw new Error('Only one default address is allowed');
+          }
+        }
+      }
+    }
+  }
+});
+Address.belongsTo(User, { foreignKey: 'customer_id', onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 
 //Model- Product
 const Product = sequelize.define('product', {
@@ -146,6 +192,22 @@ app.post("/ecommerce/signup", async (req,res) => {
     }
 }); 
 
+//Add Address
+app.post("/ecommerce/address_register", async (req,res) => {
+  try {
+      const address = await Address.create({
+      id:req.body.id,
+      customer_id:req.body.customer_id,
+      Village:req.body.Village,
+      City:req.body.City,
+      PinCode:req.body.PinCode,
+      defaultAddress: req.body.defaultAddress,
+    });
+    res.json({ message: 'Address added successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}); 
 //sign in----------------------------------------
 app.post("/ecommerce/signin", async (req,res) => {
         try {
@@ -227,7 +289,7 @@ app.get("/ecommerce/activeproducts", async (req, res) => {
 });
 
 //User Placing a order- Orderdetails
-app.post("/ecommerce/placeorder", requireSignin ,  checkToken , async (req,res) => {
+app.post("/ecommerce/placeorder",  async (req,res) => {
 
   try {
       //  const decoded=  jwt.verify(req.token, process.env.JWT_SECRET)
